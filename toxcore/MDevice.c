@@ -118,7 +118,7 @@ static int handle_custom_lossy_packet(void *object, int dev_num, int device_id, 
 /* TODO replace the options here with our own! */
 MDevice *new_mdevice(Messenger_Options *options, unsigned int *error)
 {
-    MDevice *m = calloc(1, sizeof(MDevice));
+    MDevice *dev = calloc(1, sizeof(MDevice));
 
     if (error) {
         *error = MESSENGER_ERROR_OTHER;
@@ -217,30 +217,15 @@ MDevice *new_mdevice(Messenger_Options *options, unsigned int *error)
 }
 
 /* Run this before closing shop. */
-void kill_messenger(MDevice *m)
+void kill_multidevice(MDevice *dev)
 {
-    if (!m)
+    if (!dev) {
         return;
+    }
 
     uint32_t i;
 
-    if (dev->tcp_server) {
-        kill_TCP_server(dev->tcp_server);
-    }
-
-    kill_tox_conns(dev->fr_c);
-    kill_onion(dev->onion);
-    kill_onion_announce(dev->onion_a);
-    kill_onion_client(dev->onion_c);
-    kill_net_crypto(dev->net_crypto);
-    kill_DHT(dev->dht);
-    kill_networking(dev->net);
-
-    for (i = 0; i < dev->numfriends; ++i) {
-        clear_receipts(m, i);
-    }
-
-    free(dev->friendlist);
+    free(dev->device);
     free(dev);
 }
 
@@ -273,8 +258,9 @@ static int get_device_id(MDevice *dev, const uint8_t *real_pk)
     return -1;
 }
 
-int mdev_add_new_device_self(MDevice *dev, const uint8_t *real_pk)
+int mdev_add_new_device_self(Tox *tox, const uint8_t *real_pk)
 {
+    MDevice *dev = tox->mdev;
     if (!public_key_valid(real_pk)) {
         return -1;
     }

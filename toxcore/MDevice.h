@@ -7,6 +7,7 @@
 #ifndef MULTIDEV_H
 #define MULTIDEV_H
 
+#include "tox.h"
 #include "Messenger.h"
 #include "tox_connection.h"
 
@@ -67,6 +68,8 @@ struct MDevice {
     uint8_t status;
 
 };
+
+typedef struct Tox Tox;
 
 /* TODO DOCUMENT THIS FXN */
 void do_multidevice(MDevice *dev);

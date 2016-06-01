@@ -562,7 +562,6 @@ typedef struct Group_Chats  Group_Chats;
 typedef struct ToxAV        ToxAV;
 
 struct Tox {
-    Messenger   *m;
     MDevice     *mdev;
     Group_Chats *gc;
     ToxAV       *av;

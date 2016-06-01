@@ -115,6 +115,17 @@ static int handle_custom_lossy_packet(void *object, int dev_num, int device_id, 
     return 0;
 }
 
+/* Function to filter out some friend requests*/
+static int friend_already_added(const uint8_t *real_pk, void *data)
+{
+    const Messenger *m = data;
+
+    if (getfriend_id(m, real_pk) == -1)
+        return 0;
+
+    return -1;
+}
+
 /* TODO replace the options here with our own! */
 MDevice *new_mdevice(Messenger_Options *options, unsigned int *error)
 {
@@ -124,7 +135,7 @@ MDevice *new_mdevice(Messenger_Options *options, unsigned int *error)
         *error = MESSENGER_ERROR_OTHER;
     }
 
-    if (!m) {
+    if (!dev) {
         return NULL;
     }
 
@@ -149,50 +160,58 @@ MDevice *new_mdevice(Messenger_Options *options, unsigned int *error)
         return NULL;
     }
 
-    dev->dht = new_DHT(dev->net);
-
-    if (dev->dht == NULL) {
+    dev->m = new_messenger(options, error);
+    if (dev->m == NULL) {
         kill_networking(dev->net);
         free(dev);
         return NULL;
     }
 
-    dev->net_crypto = new_net_crypto(dev->dht, &options->proxy_info);
+    dev->m->dht = new_DHT(dev->net);
+
+    if (dev->m->dht == NULL) {
+        kill_networking(dev->net);
+        free(dev);
+        return NULL;
+    }
+
+    dev->net_crypto = new_net_crypto(dev->m->dht, &options->proxy_info);
 
     if (dev->net_crypto == NULL) {
         kill_networking(dev->net);
-        kill_DHT(dev->dht);
+        kill_DHT(dev->m->dht);
         free(dev);
         return NULL;
     }
 
-    dev->onion      = new_onion(dev->dht);
-    dev->onion_a    = new_onion_announce(dev->dht);
+    dev->onion      = new_onion(dev->m->dht);
+    dev->onion_a    = new_onion_announce(dev->m->dht);
     dev->onion_c    = new_onion_client(dev->net_crypto);
-    dev->fr_c       = new_tox_conns(dev->onion_c);
+    dev->m->fr_c       = new_tox_conns(dev->onion_c);
+    dev->dev_conns = dev->m->fr_c; /* FIXME: This is a stupid workaround, pick either but not both */
 
     if (!(dev->onion && dev->onion_a && dev->onion_c)) {
-        kill_tox_conns(dev->fr_c);
+        kill_tox_conns(dev->m->fr_c);
         kill_onion(dev->onion);
         kill_onion_announce(dev->onion_a);
         kill_onion_client(dev->onion_c);
         kill_net_crypto(dev->net_crypto);
-        kill_DHT(dev->dht);
+        kill_DHT(dev->m->dht);
         kill_networking(dev->net);
         free(dev);
         return NULL;
     }
 
     if (options->tcp_server_port) {
-        dev->tcp_server = new_TCP_server(options->ipv6enabled, 1, &options->tcp_server_port, dev->dht->self_secret_key, dev->onion);
+        dev->m->tcp_server = new_TCP_server(options->ipv6enabled, 1, &options->tcp_server_port, dev->m->dht->self_secret_key, dev->onion);
 
-        if (dev->tcp_server == NULL) {
-            kill_tox_conns(dev->fr_c);
+        if (dev->m->tcp_server == NULL) {
+            kill_tox_conns(dev->m->fr_c);
             kill_onion(dev->onion);
             kill_onion_announce(dev->onion_a);
             kill_onion_client(dev->onion_c);
             kill_net_crypto(dev->net_crypto);
-            kill_DHT(dev->dht);
+            kill_DHT(dev->m->dht);
             kill_networking(dev->net);
             free(dev);
 
@@ -204,16 +223,16 @@ MDevice *new_mdevice(Messenger_Options *options, unsigned int *error)
         }
     }
 
-    dev->options = *options;
-    friendreq_init(&(dev->fr), dev->fr_c);
-    set_nospam(&(dev->fr), random_int());
-    set_filter_function(&(dev->fr), &friend_already_added, m);
+    dev->m->options = *options;
+    friendreq_init(&(dev->m->fr), dev->m->fr_c);
+    set_nospam(&(dev->m->fr), random_int());
+    set_filter_function(&(dev->m->fr), &friend_already_added, dev->m);
 
     if (error) {
         *error = MESSENGER_ERROR_NONE;
     }
 
-    return m;
+    return dev;
 }
 
 /* Run this before closing shop. */
@@ -258,9 +277,8 @@ static int get_device_id(MDevice *dev, const uint8_t *real_pk)
     return -1;
 }
 
-int mdev_add_new_device_self(Tox *tox, const uint8_t *real_pk)
+int mdev_add_new_device_self(MDevice *dev, const uint8_t *real_pk)
 {
-    MDevice *dev = tox->mdev;
     if (!public_key_valid(real_pk)) {
         return -1;
     }

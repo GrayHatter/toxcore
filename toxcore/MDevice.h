@@ -18,7 +18,7 @@
 #define MDEV_CALLBACK_INDEX 0
 
 typedef enum {
-    NO_MDEV,
+    NO_MDEV = 0,
     /* Device is blocked */
     MDEV_REMOVED,
     MDEV_REFUSED,
@@ -31,7 +31,7 @@ typedef enum {
 } MDEV_STATUS;
 
 typedef struct {
-    MDEV_STATUS status; //0 no device, 1-3 device confimed, 4-5 device is blocked
+    MDEV_STATUS status; // 0 no device, 1-3 device confimed, 4-5 device is blocked
     uint8_t     real_pk[crypto_box_PUBLICKEYBYTES];
 
     int         toxconn_id;
@@ -72,8 +72,10 @@ struct MDevice {
 typedef struct Tox Tox;
 
 /* TODO DOCUMENT THIS FXN */
-void do_multidevice(MDevice *dev);
+MDevice *new_mdevice(Messenger_Options *options, unsigned int *error);
 
+/* TODO DOCUMENT THIS FXN */
+void do_multidevice(MDevice *dev);
 
 /* TODO DOCUMENT THIS FXN */
 int mdev_add_new_device_self(MDevice *dev, const uint8_t *real_pk);

@@ -30,6 +30,7 @@
 #include "../toxcore/Messenger.h"
 #include "../toxcore/logger.h"
 #include "../toxcore/util.h"
+#include "../toxcore/MDevice.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -139,7 +140,7 @@ ToxAV *toxav_new(Tox *tox, TOXAV_ERR_NEW *error)
         goto END;
     }
 
-    if (tox->m->msi_packet) {
+    if (tox->mdev->m->msi_packet) {
         rc = TOXAV_ERR_NEW_MULTIPLE;
         goto END;
     }
@@ -158,7 +159,7 @@ ToxAV *toxav_new(Tox *tox, TOXAV_ERR_NEW *error)
         goto END;
     }
 
-    av->m = tox->m;
+    av->m = tox->mdev->m;
     av->msi = msi_new(av->m);
 
     if (av->msi == NULL) {

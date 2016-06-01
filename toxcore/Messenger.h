@@ -26,7 +26,6 @@
 #ifndef MESSENGER_H
 #define MESSENGER_H
 
-#include "MDevice.h"
 #include "friend_requests.h"
 #include "tox_connection.h"
 

@@ -27,6 +27,7 @@
 
 #include "group.h"
 #include "util.h"
+#include "MDevice.h"
 
 typedef struct Tox Tox;
 
@@ -1305,7 +1306,7 @@ static void handle_friend_invite_packet(Tox *tox, uint32_t friendnumber, const u
             memcpy(&other_groupnum, data + 1, sizeof(uint16_t));
             other_groupnum = ntohs(other_groupnum);
 
-            int friendcon_id = getfriendcon_id(tox->m, friendnumber);
+            int friendcon_id = getfriendcon_id(tox->mdev->m, friendnumber);
             uint8_t real_pk[crypto_box_PUBLICKEYBYTES], temp_pk[crypto_box_PUBLICKEYBYTES];
             toxconn_get_public_keys(real_pk, temp_pk, g_c->fr_c, friendcon_id);
 
@@ -2234,7 +2235,7 @@ Group_Chats *new_groupchats(Tox *tox)
         return NULL;
     }
 
-    if (!tox->m) {
+    if (!tox->mdev->m) {
         return NULL;
     }
 
@@ -2244,10 +2245,10 @@ Group_Chats *new_groupchats(Tox *tox)
         return NULL;
     }
 
-    temp->m = tox->m;
-    temp->fr_c = tox->m->fr_c;
+    temp->m = tox->mdev->m;
+    temp->fr_c = tox->mdev->m->fr_c;
     tox->gc = temp;
-    m_callback_group_invite(tox->m, &handle_friend_invite_packet);
+    m_callback_group_invite(tox->mdev->m, &handle_friend_invite_packet);
 
     return temp;
 }

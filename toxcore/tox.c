@@ -219,8 +219,10 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
     }
 
     unsigned int m_error;
+    tox->mdev = new_mdevice(&m_options, &m_error);
+
     Messenger *m = new_messenger(&m_options, &m_error);
-    tox->m = m;
+    tox->mdev->m = m;
 
     if (!new_groupchats(tox)) {
         kill_messenger(m);
@@ -254,20 +256,20 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
 void tox_kill(Tox *tox)
 {
     kill_groupchats(tox->gc);
-    kill_messenger(tox->m);
+    kill_messenger(tox->mdev->m);
     logger_kill_global();
 }
 
 size_t tox_get_savedata_size(const Tox *tox)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     return messenger_size(m);
 }
 
 void tox_get_savedata(const Tox *tox, uint8_t *data)
 {
     if (data) {
-        const Messenger *m = tox->m;
+        const Messenger *m = tox->mdev->m;
         messenger_save(m, data);
     }
 }
@@ -312,7 +314,7 @@ bool tox_bootstrap(Tox *tox, const char *address, uint16_t port, const uint8_t *
             continue;
         }
 
-        Messenger *m = tox->m;
+        Messenger *m = tox->mdev->m;
         onion_add_bs_path_node(m->onion_c, ip_port, public_key);
         DHT_bootstrap(m->dht, ip_port, public_key);
         ++count;
@@ -370,7 +372,7 @@ bool tox_add_tcp_relay(Tox *tox, const char *address, uint16_t port, const uint8
             continue;
         }
 
-        Messenger *m = tox->m;
+        Messenger *m = tox->mdev->m;
         add_tcp_relay(m->net_crypto, ip_port, public_key);
         ++count;
     } while ((info = info->ai_next));
@@ -388,7 +390,7 @@ bool tox_add_tcp_relay(Tox *tox, const char *address, uint16_t port, const uint8
 
 TOX_CONNECTION tox_self_get_connection_status(const Tox *tox)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
 
     unsigned int ret = onion_connection_status(m->onion_c);
 
@@ -404,27 +406,27 @@ TOX_CONNECTION tox_self_get_connection_status(const Tox *tox)
 
 void tox_callback_self_connection_status(Tox *tox, tox_self_connection_status_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     m_callback_core_connection(m, function, user_data);
 }
 
 uint32_t tox_iteration_interval(const Tox *tox)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     return messenger_run_interval(m);
 }
 
 void tox_iterate(Tox *tox)
 {
     do_multidevice(tox->mdev);
-    do_messenger(tox->m);
+    do_messenger(tox->mdev->m);
     do_groupchats(tox->gc);
 }
 
 void tox_self_get_address(const Tox *tox, uint8_t *address)
 {
     if (address) {
-        const Messenger *m = tox->m;
+        const Messenger *m = tox->mdev->m;
         getaddress(m, address);
     }
 }
@@ -454,19 +456,19 @@ bool tox_self_delete_device(Tox *tox, uint32_t device_num, TOX_ERR_DEVICE_DEL *e
 
 void tox_self_set_nospam(Tox *tox, uint32_t nospam)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     set_nospam(&(m->fr), nospam);
 }
 
 uint32_t tox_self_get_nospam(const Tox *tox)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     return get_nospam(&(m->fr));
 }
 
 void tox_self_get_public_key(const Tox *tox, uint8_t *public_key)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
 
     if (public_key)
         memcpy(public_key, m->net_crypto->self_public_key, crypto_box_PUBLICKEYBYTES);
@@ -474,7 +476,7 @@ void tox_self_get_public_key(const Tox *tox, uint8_t *public_key)
 
 void tox_self_get_secret_key(const Tox *tox, uint8_t *secret_key)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
 
     if (secret_key)
         memcpy(secret_key, m->net_crypto->self_secret_key, crypto_box_SECRETKEYBYTES);
@@ -487,7 +489,7 @@ bool tox_self_set_name(Tox *tox, const uint8_t *name, size_t length, TOX_ERR_SET
         return 0;
     }
 
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
 
     if (setname(m, name, length) == 0) {
         // --: function to set different per group names?
@@ -503,14 +505,14 @@ bool tox_self_set_name(Tox *tox, const uint8_t *name, size_t length, TOX_ERR_SET
 
 size_t tox_self_get_name_size(const Tox *tox)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     return m_get_self_name_size(m);
 }
 
 void tox_self_get_name(const Tox *tox, uint8_t *name)
 {
     if (name) {
-        const Messenger *m = tox->m;
+        const Messenger *m = tox->mdev->m;
         getself_name(m, name);
     }
 }
@@ -522,7 +524,7 @@ bool tox_self_set_status_message(Tox *tox, const uint8_t *status, size_t length,
         return 0;
     }
 
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
 
     if (m_set_statusmessage(m, status, length) == 0) {
         SET_ERROR_PARAMETER(error, TOX_ERR_SET_INFO_OK);
@@ -535,27 +537,27 @@ bool tox_self_set_status_message(Tox *tox, const uint8_t *status, size_t length,
 
 size_t tox_self_get_status_message_size(const Tox *tox)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     return m_get_self_statusmessage_size(m);
 }
 
 void tox_self_get_status_message(const Tox *tox, uint8_t *status)
 {
     if (status) {
-        const Messenger *m = tox->m;
+        const Messenger *m = tox->mdev->m;
         m_copy_self_statusmessage(m, status);
     }
 }
 
 void tox_self_set_status(Tox *tox, TOX_USER_STATUS user_status)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     m_set_userstatus(m, user_status);
 }
 
 TOX_USER_STATUS tox_self_get_status(const Tox *tox)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     return m_get_self_userstatus(m);
 }
 
@@ -635,7 +637,7 @@ uint32_t tox_friend_add(Tox *tox, const uint8_t *address, const uint8_t *message
         return UINT32_MAX;
     }
 
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     int32_t ret = m_addfriend(m, address, message, length);
 
     if (ret >= 0) {
@@ -654,7 +656,7 @@ uint32_t tox_friend_add_device(Tox *tox, const uint8_t *address, uint32_t friend
         return UINT32_MAX;
     }
 
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     int32_t ret = m_add_device_to_friend(m, address, friend_number);
 
     if (ret >= 0) {
@@ -672,7 +674,7 @@ uint32_t tox_friend_add_norequest(Tox *tox, const uint8_t *public_key, TOX_ERR_F
         return UINT32_MAX;
     }
 
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     int32_t ret = m_addfriend_norequest(m, public_key);
 
     if (ret >= 0) {
@@ -686,7 +688,7 @@ uint32_t tox_friend_add_norequest(Tox *tox, const uint8_t *public_key, TOX_ERR_F
 
 bool tox_friend_delete(Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_DELETE *error)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     int ret = m_delfriend(m, friend_number);
 
     //TODO handle if realloc fails?
@@ -706,7 +708,7 @@ uint32_t tox_friend_by_public_key(const Tox *tox, const uint8_t *public_key, TOX
         return UINT32_MAX;
     }
 
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     int32_t ret = getfriend_id(m, public_key);
 
     if (ret == -1) {
@@ -725,7 +727,7 @@ bool tox_friend_get_public_key(const Tox *tox, uint32_t friend_number, uint8_t *
         return 0;
     }
 
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
 
     if (get_real_pk(m, friend_number, public_key) == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_FRIEND_GET_PUBLIC_KEY_FRIEND_NOT_FOUND);
@@ -738,13 +740,13 @@ bool tox_friend_get_public_key(const Tox *tox, uint32_t friend_number, uint8_t *
 
 bool tox_friend_exists(const Tox *tox, uint32_t friend_number)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     return m_friend_exists(m, friend_number);
 }
 
 uint64_t tox_friend_get_last_online(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_GET_LAST_ONLINE *error)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     uint64_t timestamp = m_get_last_online(m, friend_number);
 
     if (timestamp == UINT64_MAX) {
@@ -758,14 +760,14 @@ uint64_t tox_friend_get_last_online(const Tox *tox, uint32_t friend_number, TOX_
 
 size_t tox_self_get_friend_list_size(const Tox *tox)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     return count_friendlist(m);
 }
 
 void tox_self_get_friend_list(const Tox *tox, uint32_t *list)
 {
     if (list) {
-        const Messenger *m = tox->m;
+        const Messenger *m = tox->mdev->m;
         //TODO: size parameter?
         copy_friendlist(m, list, tox_self_get_friend_list_size(tox));
     }
@@ -773,7 +775,7 @@ void tox_self_get_friend_list(const Tox *tox, uint32_t *list)
 
 size_t tox_friend_get_name_size(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_QUERY *error)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     int ret = m_get_name_size(m, friend_number);
 
     if (ret == -1) {
@@ -792,7 +794,7 @@ bool tox_friend_get_name(const Tox *tox, uint32_t friend_number, uint8_t *name, 
         return 0;
     }
 
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     int ret = getname(m, friend_number, name);
 
     if (ret == -1) {
@@ -806,13 +808,13 @@ bool tox_friend_get_name(const Tox *tox, uint32_t friend_number, uint8_t *name, 
 
 void tox_callback_friend_name(Tox *tox, tox_friend_name_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     m_callback_namechange(m, function, user_data);
 }
 
 size_t tox_friend_get_status_message_size(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_QUERY *error)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     int ret = m_get_statusmessage_size(m, friend_number);
 
     if (ret == -1) {
@@ -832,7 +834,7 @@ bool tox_friend_get_status_message(const Tox *tox, uint32_t friend_number, uint8
         return 0;
     }
 
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     //TODO: size parameter?
     int ret = m_copy_statusmessage(m, friend_number, message, m_get_statusmessage_size(m, friend_number));
 
@@ -847,13 +849,13 @@ bool tox_friend_get_status_message(const Tox *tox, uint32_t friend_number, uint8
 
 void tox_callback_friend_status_message(Tox *tox, tox_friend_status_message_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     m_callback_statusmessage(m, function, user_data);
 }
 
 TOX_USER_STATUS tox_friend_get_status(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_QUERY *error)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
 
     int ret = m_get_userstatus(m, friend_number);
 
@@ -868,13 +870,13 @@ TOX_USER_STATUS tox_friend_get_status(const Tox *tox, uint32_t friend_number, TO
 
 void tox_callback_friend_status(Tox *tox, tox_friend_status_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     m_callback_userstatus(m, function, user_data);
 }
 
 TOX_CONNECTION tox_friend_get_connection_status(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_QUERY *error)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
 
     int ret = m_get_friend_connectionstatus(m, friend_number);
 
@@ -889,13 +891,13 @@ TOX_CONNECTION tox_friend_get_connection_status(const Tox *tox, uint32_t friend_
 
 void tox_callback_friend_connection_status(Tox *tox, tox_friend_connection_status_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     m_callback_connectionstatus(m, function, user_data);
 }
 
 bool tox_friend_get_typing(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_QUERY *error)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     int ret = m_get_istyping(m, friend_number);
 
     if (ret == -1) {
@@ -909,13 +911,13 @@ bool tox_friend_get_typing(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEN
 
 void tox_callback_friend_typing(Tox *tox, tox_friend_typing_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     m_callback_typingchange(m, function, user_data);
 }
 
 bool tox_self_set_typing(Tox *tox, uint32_t friend_number, bool is_typing, TOX_ERR_SET_TYPING *error)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
 
     if (m_set_usertyping(m, friend_number, is_typing) == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_SET_TYPING_FRIEND_NOT_FOUND);
@@ -968,7 +970,7 @@ uint32_t tox_friend_send_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_T
         return 0;
     }
 
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     uint32_t message_id = 0;
     set_message_error(m_send_message_generic(m, friend_number, type, message, length, &message_id), error);
     return message_id;
@@ -976,19 +978,19 @@ uint32_t tox_friend_send_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_T
 
 void tox_callback_friend_read_receipt(Tox *tox, tox_friend_read_receipt_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     m_callback_read_receipt(m, function, user_data);
 }
 
 void tox_callback_friend_request(Tox *tox, tox_friend_request_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     m_callback_friendrequest(m, function, user_data);
 }
 
 void tox_callback_friend_message(Tox *tox, tox_friend_message_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     m_callback_friendmessage(m, function, user_data);
 }
 
@@ -1005,7 +1007,7 @@ bool tox_hash(uint8_t *hash, const uint8_t *data, size_t length)
 bool tox_file_control(Tox *tox, uint32_t friend_number, uint32_t file_number, TOX_FILE_CONTROL control,
                       TOX_ERR_FILE_CONTROL *error)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     int ret = file_control(m, friend_number, file_number, control);
 
     if (ret == 0) {
@@ -1054,7 +1056,7 @@ bool tox_file_control(Tox *tox, uint32_t friend_number, uint32_t file_number, TO
 bool tox_file_seek(Tox *tox, uint32_t friend_number, uint32_t file_number, uint64_t position,
                    TOX_ERR_FILE_SEEK *error)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     int ret = file_seek(m, friend_number, file_number, position);
 
     if (ret == 0) {
@@ -1095,7 +1097,7 @@ bool tox_file_seek(Tox *tox, uint32_t friend_number, uint32_t file_number, uint6
 
 void tox_callback_file_recv_control(Tox *tox, tox_file_recv_control_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     callback_file_control(m, function, user_data);
 }
 
@@ -1107,7 +1109,7 @@ bool tox_file_get_file_id(const Tox *tox, uint32_t friend_number, uint32_t file_
         return 0;
     }
 
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     int ret = file_get_id(m, friend_number, file_number, file_id);
 
     if (ret == 0) {
@@ -1138,7 +1140,7 @@ uint32_t tox_file_send(Tox *tox, uint32_t friend_number, uint32_t kind, uint64_t
         file_id = f_id;
     }
 
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     long int file_num = new_filesender(m, friend_number, kind, file_size, file_id, filename, filename_length);
 
     if (file_num >= 0) {
@@ -1171,7 +1173,7 @@ uint32_t tox_file_send(Tox *tox, uint32_t friend_number, uint32_t kind, uint64_t
 bool tox_file_send_chunk(Tox *tox, uint32_t friend_number, uint32_t file_number, uint64_t position, const uint8_t *data,
                          size_t length, TOX_ERR_FILE_SEND_CHUNK *error)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     int ret = file_data(m, friend_number, file_number, position, data, length);
 
     if (ret == 0) {
@@ -1215,19 +1217,19 @@ bool tox_file_send_chunk(Tox *tox, uint32_t friend_number, uint32_t file_number,
 
 void tox_callback_file_chunk_request(Tox *tox, tox_file_chunk_request_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     callback_file_reqchunk(m, function, user_data);
 }
 
 void tox_callback_file_recv(Tox *tox, tox_file_recv_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     callback_file_sendrequest(m, function, user_data);
 }
 
 void tox_callback_file_recv_chunk(Tox *tox, tox_file_recv_chunk_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     callback_file_data(m, function, user_data);
 }
 
@@ -1268,7 +1270,7 @@ bool tox_friend_send_lossy_packet(Tox *tox, uint32_t friend_number, const uint8_
         return 0;
     }
 
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
 
     if (length == 0) {
         SET_ERROR_PARAMETER(error, TOX_ERR_FRIEND_CUSTOM_PACKET_EMPTY);
@@ -1293,7 +1295,7 @@ bool tox_friend_send_lossy_packet(Tox *tox, uint32_t friend_number, const uint8_
 
 void tox_callback_friend_lossy_packet(Tox *tox, tox_friend_lossy_packet_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     custom_lossy_packet_registerhandler(m, function, user_data);
 }
 
@@ -1305,7 +1307,7 @@ bool tox_friend_send_lossless_packet(Tox *tox, uint32_t friend_number, const uin
         return 0;
     }
 
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
 
     if (length == 0) {
         SET_ERROR_PARAMETER(error, TOX_ERR_FRIEND_CUSTOM_PACKET_EMPTY);
@@ -1325,21 +1327,21 @@ bool tox_friend_send_lossless_packet(Tox *tox, uint32_t friend_number, const uin
 
 void tox_callback_friend_lossless_packet(Tox *tox, tox_friend_lossless_packet_cb *function, void *user_data)
 {
-    Messenger *m = tox->m;
+    Messenger *m = tox->mdev->m;
     custom_lossless_packet_registerhandler(m, function, user_data);
 }
 
 void tox_self_get_dht_id(const Tox *tox, uint8_t *dht_id)
 {
     if (dht_id) {
-        const Messenger *m = tox->m;
+        const Messenger *m = tox->mdev->m;
         memcpy(dht_id , m->dht->self_public_key, crypto_box_PUBLICKEYBYTES);
     }
 }
 
 uint16_t tox_self_get_udp_port(const Tox *tox, TOX_ERR_GET_PORT *error)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
     uint16_t port = htons(m->net->port);
 
     if (port) {
@@ -1353,7 +1355,7 @@ uint16_t tox_self_get_udp_port(const Tox *tox, TOX_ERR_GET_PORT *error)
 
 uint16_t tox_self_get_tcp_port(const Tox *tox, TOX_ERR_GET_PORT *error)
 {
-    const Messenger *m = tox->m;
+    const Messenger *m = tox->mdev->m;
 
     if (m->tcp_server) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GET_PORT_OK);

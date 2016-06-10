@@ -246,7 +246,8 @@ struct MDevice {
 typedef struct Tox Tox;
 
 /*
- * Start the multi device module.
+ * Multidevice's loop doing all the internal works.
+ * Must be called before calling any mdev_* functions.
  */
 void do_multidevice(MDevice *dev);
 
@@ -257,8 +258,12 @@ MDevice *new_mdevice(Tox* tox, Messenger_Options *options, unsigned int *error);
 
 /*
  * Add a new paired device to self tox instance.
- * Needs a `name` and it's `length`.
- * `real_pk` is the device pubkey to add.
+ *  Name stands for the device "description", that's
+ *  what clients will display to help user indentify
+ *  the device. Name can be 0-length.
+ *
+ *  The function also needs a `real_pk` that is the
+ *  real device public key to pair with.
  */
 int mdev_add_new_device_self(Tox *tox, const uint8_t* name, size_t length, const uint8_t *real_pk);
 

@@ -258,9 +258,9 @@ MDevice *new_mdevice(Tox* tox, Messenger_Options *options, unsigned int *error);
 
 /*
  * Add a new paired device to self tox instance.
- *  Name stands for the device "description", that's
- *  what clients will display to help user indentify
- *  the device. Name can be 0-length.
+ *  Name stands for the device "description".
+ *  Clients will display this name to help user identify the device.
+ *  Name can be 0-length.
  *
  *  The function also needs a `real_pk` that is the
  *  real device public key to pair with.

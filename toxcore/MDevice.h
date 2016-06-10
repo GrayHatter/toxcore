@@ -265,7 +265,7 @@ int mdev_add_new_device_self(Tox *tox, const uint8_t* name, size_t length, const
 /*
  * Removes a device and adds it to the removed_devices blacklist
  */
-int mdev_remove_device(Tox* tox, const uint8_t *address);
+int mdev_remove_device(Tox* tox, const uint8_t *real_pk);
 
 /*
  * Callback for syncing name changes from paired devices.

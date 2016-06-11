@@ -256,39 +256,79 @@ struct MDevice {
 
 typedef struct Tox Tox;
 
-/* TODO DOCUMENT THIS FXN */
+/*
+ * Multidevice's loop doing all the internal works.
+ * Must be called before calling any mdev_* functions.
+ */
 void do_multidevice(MDevice *dev);
 
-/* TODO DOCUMENT THIS FXN */
+/*
+ * Returns a new multidevice struct.
+ */
 MDevice *new_mdevice(Tox* tox, Messenger_Options *options, unsigned int *error);
 
-/* TODO DOCUMENT THIS FXN */
+/*
+ * Add a new paired device to self tox instance.
+ *  Name stands for the device "description".
+ *  Clients will display this name to help user identify the device.
+ *  Name can be 0-length.
+ *
+ *  The function also needs a `real_pk` that is the
+ *  real device public key to pair with.
+ */
 int mdev_add_new_device_self(Tox *tox, const uint8_t* name, size_t length, const uint8_t *real_pk);
 
-/* Removes a device and adds it to the removed_devices blacklist */
-int mdev_remove_device(Tox* tox, const uint8_t *address);
+/*
+ * Removes a device and adds it to the removed_devices blacklist
+ */
+int mdev_remove_device(Tox* tox, const uint8_t *real_pk);
 
-/* Multi-device set callbacks */
+/*
+ * Callback for syncing name changes from paired devices.
+ */
 void mdev_callback_self_name_change(Tox *tox,
                                    void (*function)(Tox *tox, uint32_t, const uint8_t *, size_t, void *),
                                    void *userdata);
+
+/*
+ * Callback for syncing status messages change from paired devices.
+ */
 void mdev_callback_self_status_message_change(Tox *tox,
                                    void (*function)(Tox *tox, uint32_t, const uint8_t *, size_t, void *),
                                    void *userdata);
 
-/* Multi-device send data fxns */
+/*
+ * Synchronize name changes between self Tox and paired devices.
+ * Returns true if change has been synced, false if not.
+ */
 bool mdev_sync_name_change(Tox *tox, const uint8_t *name, size_t length);
+
+/*
+ * Synchronize status message changes between self Tox and paired devices.
+ * Returns true if change has been synced, false if not.
+ */
 bool mdev_sync_status_message_change(Tox *tox, const uint8_t *status, size_t length);
+
+/*
+ * Synchronize a generic message (any supported TOX_MESSAGE_TYPE is accepted)
+ * between the self Tox and paired devices.
+ */
 void mdev_send_message_generic(Tox* tox, uint32_t friend_number, TOX_MESSAGE_TYPE type,
                                const uint8_t *message, size_t length);
 
-/* Return size of the mdev data (for saving) */
+/*
+ * Return size of the mdev data (for saving)
+ */
 size_t mdev_size(const Tox *tox);
 
-/* Save the mdev in data of size mdev_size(). */
+/*
+ * Save the mdev in data of size mdev_size().
+ */
 uint8_t *mdev_save(const Tox *tox, uint8_t *data);
 
-/* Loads the MDevice data from the sections of the saved state */
+/*
+ * Loads the MDevice data from the sections of the saved state
+ */
 int mdev_save_read_sections_callback(Tox *tox, const uint8_t *data, uint32_t length, uint16_t type);
 
 #endif

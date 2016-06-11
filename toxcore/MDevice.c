@@ -1146,15 +1146,15 @@ fail_generic:
     return 0;
 }
 
-int mdev_remove_device(Tox *tox, const uint8_t *address)
+int mdev_remove_device(Tox *tox, const uint8_t *real_pk)
 {
     MDevice* self = tox->mdev;
 
-    int device_num = get_device_id(tox->mdev, address);
+    int device_num = get_device_id(tox->mdev, real_pk);
     if (device_num < 0)
         return -1;
 
-    if (get_removed_device_id(self, address) < 0) {
+    if (get_removed_device_id(self, real_pk) < 0) {
         realloc_mdev_removed_list(self, self->removed_devices_count+1);
         memcpy(self->removed_devices[self->removed_devices_count], self->devices[device_num].real_pk,
                 sizeof(self->devices[device_num].real_pk));

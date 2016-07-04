@@ -897,7 +897,12 @@ bool mdev_send_name_change(Tox *tox, const uint8_t *name, size_t length)
 
     packet[0] = PACKET_ID_MDEV_SEND;
     packet[1] = MDEV_SEND_NAME;
-    memcpy(&packet[2], name, length);
+
+    uint8_t name_to_send[sizeof(name)];
+    memcpy(name_to_send, name, sizeof(uint8_t));
+    host_to_net(name_to_send, sizeof(name_to_send));
+
+    memcpy(&packet[2], name_to_send, length);
 
     if (tox->mdev->devices_count == 0) {
         return 0;
@@ -917,7 +922,12 @@ bool mdev_send_status_message_change(Tox *tox, const uint8_t *status, size_t len
 
     packet[0] = PACKET_ID_MDEV_SEND;
     packet[1] = MDEV_SEND_STATUS;
-    memcpy(&packet[2], status, length);
+
+    uint8_t status_to_send[sizeof(status)];
+    memcpy(status_to_send, status, sizeof(uint8_t));
+    host_to_net(status_to_send, sizeof(status_to_send));
+
+    memcpy(&packet[2], status_to_send, length);
 
     if (tox->mdev->devices_count == 0) {
         return 0;

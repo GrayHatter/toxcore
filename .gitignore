@@ -8,6 +8,10 @@ Icon?
 ethumbs.db
 Thumbs.db
 *.tmp
+.dir-locals.el
+GPATH
+GRTAGS
+GTAGS
 
 # Make
 CMakeCache.txt

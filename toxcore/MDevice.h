@@ -90,7 +90,7 @@ typedef enum {
     MDEV_SYNC_META,
     MDEV_SYNC_META_UPTIME,
 
-    MDEV_SYNC_SELF,
+    MDEV_SYNC_SELF,             /* TODO SYNC_SELF not yet implemented */
     MDEV_SYNC_SELF_NAME,
     MDEV_SYNC_SELF_STATUS_MSG,
     MDEV_SYNC_SELF_STATE,
@@ -106,7 +106,7 @@ typedef enum {
     MDEV_SYNC_CONTACT_COMMIT,
     MDEV_SYNC_CONTACT_ERROR,
 
-    MDEV_SYNC_DEVICE,
+    MDEV_SYNC_DEVICE,           /* TODO SYNC_DEVICE not yet implemented */
     MDEV_SYNC_DEVICE_COUNT,
     MDEV_SYNC_DEVICE_APPEND,
     MDEV_SYNC_DEVICE_REMOVE,
@@ -114,11 +114,11 @@ typedef enum {
     MDEV_SYNC_DEVICE_DONE,
     MDEV_SYNC_DEVICE_ERROR,
 
-    MDEV_SYNC_MESSAGES,
+    MDEV_SYNC_MESSAGES,         /* TODO help */
 
     MDEV_SYNC_NOTHING,
 
-    /* Send type packets are for active changes */
+    /* Send type packets are for active changes that were just made by a client. */
     MDEV_SEND_SELF_NAME,
     MDEV_SEND_SELF_STATUS_MSG, /* User flavor text */
     MDEV_SEND_SELF_STATE,      /* User state (e.g. Available, Away, DND */

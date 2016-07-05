@@ -550,11 +550,11 @@ static int sync_friend_recived(Tox *tox, uint32_t dev_num, uint8_t *real_pk, boo
  ******** Multi-device sync OUTGOING                                   ********
  ******************************************************************************/
 
-/** TODO DOCUMENT THIS FXN
- *
- *
- *
- *
+/**
+ * Creates the packet for syncing friends between devices and then sends the
+ * packet to each device.
+ * returns 0 on successs
+ * returns -1, -2, or -3 depending on the error
  */
 static int actually_send_friend_list(Tox *tox, uint32_t dev_num)
 {
@@ -570,31 +570,37 @@ static int actually_send_friend_list(Tox *tox, uint32_t dev_num)
         }
     }
 
-    int i;
+    int i, j;
     uint8_t packet[sizeof(uint8_t) * 2 + sizeof(uint8_t) * crypto_box_PUBLICKEYBYTES];
 
     for (i = 0; i < tox->m->numfriends; ++i) {
-        if (!tox->m->friendlist[i].status) {
-            /* Currently we sync all friends who we've send a friend request to.
-               Q: do we want to be "< FRIEND_CONFIRMED?"  So we only send to
-                  confirmed friends?
-               We don't (yet) sync the nospam, or the friend request message */
-            continue;
+        for(j = 0; j < tox->m->friendlist[i].dev_count; j++){
+            if (!tox->m->friendlist[i].status) {
+                /* Currently we sync all friends who we've send a friend request to.
+                   Q: do we want to be "< FRIEND_CONFIRMED?"  So we only send to
+                   confirmed friends?
+                   We don't (yet) sync the nospam, or the friend request message */
+                continue;
+            }
+
+            memset(packet, 0, sizeof(packet));
+
+            packet[0] = PACKET_ID_MDEV_SYNC;
+
+            if(j == 0)
+                packet[1] = MDEV_SYNC_CONTACT_APPEND;
+            else
+                packet[1] = MDEV_SYNC_CONTACT_APPEND_DEVICE;
+
+            memcpy(packet + 2, tox->m->friendlist[i].dev_list[j].real_pk, crypto_box_PUBLICKEYBYTES);
+
+            if (!send_mdev_packet(tox, dev_num, packet, sizeof(packet))) {
+                printf("ERROR sending MDEV_SYNC_CONTACT_APPEND packet \n");
+                return -2;
+            }
+
+            sync_friend_recived(tox, dev_num, tox->m->friendlist[i].dev_list[j].real_pk, 0);
         }
-
-        memset(packet, 0, sizeof(packet));
-
-        packet[0] = PACKET_ID_MDEV_SYNC;
-        packet[1] = MDEV_SYNC_CONTACT_APPEND;
-
-        memcpy(packet + 2, tox->m->friendlist[i].dev_list[0].real_pk, crypto_box_PUBLICKEYBYTES);
-
-        if (!send_mdev_packet(tox, dev_num, packet, sizeof(packet))) {
-            printf("ERROR sending MDEV_SYNC_CONTACT_APPEND packet \n");
-            return -2;
-        }
-
-        sync_friend_recived(tox, dev_num, tox->m->friendlist[i].dev_list[0].real_pk, 0);
     }
 
     if (!send_mdev_sync_packet(tox, dev_num, MDEV_SYNC_CONTACT_DONE)) {

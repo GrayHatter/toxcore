@@ -558,7 +558,9 @@ static int sync_friend_recived(Tox *tox, uint32_t dev_num, uint8_t *real_pk, boo
  * Creates the packet for syncing friends between devices and then sends the
  * packet to each device.
  * returns 0 on successs
- * returns -1, -2, or -3 depending on the error
+ * returns -1 if there is nothing to sync
+ * returns -2 if the packet could not be sent
+ * returns -3 if the sync done packet could not be sent
  */
 static int actually_send_friend_list(Tox *tox, uint32_t dev_num)
 {
@@ -591,10 +593,11 @@ static int actually_send_friend_list(Tox *tox, uint32_t dev_num)
 
             packet[0] = PACKET_ID_MDEV_SYNC;
 
-            if(j == 0)
+            if (j == 0) {
                 packet[1] = MDEV_SYNC_CONTACT_APPEND;
-            else
+            } else {
                 packet[1] = MDEV_SYNC_CONTACT_APPEND_DEVICE;
+            }
 
             memcpy(packet + 2, tox->m->friendlist[i].dev_list[j].real_pk, crypto_box_PUBLICKEYBYTES);
 
@@ -603,7 +606,7 @@ static int actually_send_friend_list(Tox *tox, uint32_t dev_num)
                 return -2;
             }
 
-            sync_friend_recived(tox, dev_num, tox->m->friendlist[i].dev_list[j].real_pk, 0);
+            sync_friend_recived(tox, dev_num, tox->m->friendlist[i].dev_list[j].real_pk, j);
         }
     }
 

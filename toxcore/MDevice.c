@@ -338,7 +338,10 @@ static int init_sync(Tox *tox, uint32_t dev_num)
 }
 
 /** cleans up the sync process if the peer goes offline before the sync
- *  successfully completes */
+ *  successfully completes *
+ *
+ *  TODO this needs to be tested!
+ */
 static int decon_sync(MDevice *mdev, uint32_t dev_num)
 {
     if (mdev->devices[dev_num].status != MDEV_ONLINE) {
@@ -439,8 +442,9 @@ static int sync_friend_commit(Tox *tox, uint32_t dev_num)
         /* TODO this will increment the lock count for this connection for this contact.
          * and I haven't verified that this is okay.
          *
-         * It would be safer, to close the tox_conn here, but I'm also not convinced that's
-         * required, or the right thing to do either. */
+         * It would seem to make more sense, to close the tox_conn here,
+         * but I'm also not convinced that's required, or the right thing
+         * to do either. */
         int fnum = m_addfriend_norequest(tox, &temp->dev_list[0].real_pk[0]);
 
         if (fnum < 0) {
@@ -609,8 +613,9 @@ static int handle_status(void *object, int dev_num, int device_id, uint8_t statu
     Tox *tox = object;
     MDevice *mdev = tox->mdev;
 
-    if (dev_num < 0 || dev_num > UINT32_MAX || (uint32_t)dev_num >= mdev->devices_count)
+    if (dev_num < 0 || dev_num > UINT32_MAX || (uint32_t)dev_num >= mdev->devices_count) {
         return -1;
+    }
 
     printf("handle_status MDEV dev_num %i || dev_id %i || status %u \n", dev_num, device_id, status);
     if (status) {
@@ -767,13 +772,12 @@ static int handle_packet_sync(Tox *tox, uint32_t dev_num, uint8_t *pkt, uint16_t
             if (us > them) {
                 tox->mdev->devices[dev_num].sync_role    = MDEV_SYNC_ROLE_PRIMARY;
                 tox->mdev->devices[dev_num].sync_status  = MDEV_SYNC_STATUS_FRIENDS_SENDING;
-                init_sync_friends(tox, dev_num);
             } else {
                 tox->mdev->devices[dev_num].sync_role    = MDEV_SYNC_ROLE_SECONDARY;
                 tox->mdev->devices[dev_num].sync_status  = MDEV_SYNC_STATUS_FRIENDS_RECIVING;
-                init_sync_friends(tox, dev_num);
             }
 
+            init_sync_friends(tox, dev_num);
             break;
         }
 
@@ -888,6 +892,14 @@ static int handle_packet_sync(Tox *tox, uint32_t dev_num, uint8_t *pkt, uint16_t
                     tox->m->friend_list_change(tox, tox->m->friend_list_change_userdata);
                 }
             }
+            break;
+        }
+
+        case MDEV_SYNC_CONTACT_ERROR: {
+            printf("MDEV_SYNC_CONTACT_ERROR\n");
+
+            decon_sync(tox->mdev, dev_num);
+
             break;
         }
 
@@ -1017,7 +1029,6 @@ bool mdev_send_state_change(Tox *tox, const TOX_USER_STATUS state)
     return 1;
 }
 
-
 int mdev_send_message_generic(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type, const uint8_t *message,
                                size_t length)
 {
@@ -1046,7 +1057,6 @@ int mdev_send_message_generic(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE
 
     return 0;
 }
-
 
 
 /******************************************************************************

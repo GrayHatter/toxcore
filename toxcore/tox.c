@@ -612,9 +612,9 @@ bool tox_self_delete_device(Tox *tox, const uint8_t *address, TOX_ERR_DEVICE_DEL
     }
 }
 
-void tox_callback_device_sent_message(Tox *tox, tox_device_sent_message_cb *callback, void *userdata)
+void tox_callback_mdev_sent_message(Tox *tox, tox_mdev_sent_message_cb *callback, void *userdata)
 {
-    mdev_callback_device_sent_message(tox, callback, userdata);
+    mdev_callback_mdev_sent_message(tox, callback, userdata);
 }
 
 
@@ -681,7 +681,7 @@ void tox_self_get_name(const Tox *tox, uint8_t *name)
 
 void tox_callback_mdev_self_name(Tox *tox, tox_mdev_self_name_cb *function, void *user_data)
 {
-    mdev_callback_self_name_change(tox, function, user_data);
+    mdev_callback_self_name(tox, function, user_data);
 }
 
 bool tox_self_set_status_message(Tox *tox, const uint8_t *status, size_t length, TOX_ERR_SET_INFO *error)
@@ -720,18 +720,27 @@ void tox_self_get_status_message(const Tox *tox, uint8_t *status)
 
 void tox_callback_mdev_self_status_message(Tox *tox, tox_mdev_self_status_message_cb *function, void *user_data)
 {
-    mdev_callback_self_status_message_change(tox, function, user_data);
+    mdev_callback_self_status_message(tox, function, user_data);
 }
 
 void tox_self_set_status(Tox *tox, TOX_USER_STATUS user_status)
 {
     m_set_userstatus(tox, user_status);
+
+    /* TODO Error checking? */
+    mdev_send_state_change(tox, user_status);
 }
 
 TOX_USER_STATUS tox_self_get_status(const Tox *tox)
 {
     return m_get_self_userstatus(tox);
 }
+
+void tox_callback_mdev_self_state(Tox *tox, tox_mdev_self_state_cb *function, void *user_data)
+{
+    mdev_callback_self_state(tox, function, user_data);
+}
+
 
 static void set_friend_error(int32_t ret, TOX_ERR_FRIEND_ADD *error)
 {

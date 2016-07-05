@@ -1059,7 +1059,7 @@ bool tox_self_delete_device(Tox *tox, const uint8_t *address, TOX_ERR_DEVICE_DEL
  * @param msg            [description]
  * @param msg_length     [description]
  */
-typedef void tox_device_sent_message_cb(Tox *tox, uint32_t sending_device, uint32_t target_friend,
+typedef void tox_mdev_sent_message_cb(Tox *tox, uint32_t sending_device, uint32_t target_friend,
                                         TOX_MESSAGE_TYPE type, uint8_t *msg, size_t msg_length);
 
 /**
@@ -1068,7 +1068,7 @@ typedef void tox_device_sent_message_cb(Tox *tox, uint32_t sending_device, uint3
  * @param callback [description]
  * @param userdata [description]
  */
-void tox_callback_device_sent_message(Tox *tox, tox_device_sent_message_cb *callback, void *userdata);
+void tox_callback_mdev_sent_message(Tox *tox, tox_mdev_sent_message_cb *callback, void *userdata);
 
 
 /*******************************************************************************
@@ -1215,6 +1215,18 @@ void tox_self_set_status(Tox *tox, TOX_USER_STATUS status);
  */
 TOX_USER_STATUS tox_self_get_status(const Tox *tox);
 
+/**
+ * @param device_number The number of the device sending the status message change.
+ * @param state TOX_USER_STATUS, the user state as enumeration above.
+ */
+typedef void tox_mdev_self_state_cb(Tox *tox, uint32_t device_number, TOX_USER_STATUS state, void *user_data);
+
+/**
+ * Set the callback for the `user_state` set by other device event. Pass NULL to unset.
+ *
+ * This event is triggered when a remote device changes the user's state (e.g. Away, DND).
+ */
+void tox_callback_mdev_self_state(Tox *tox, tox_mdev_self_state_cb *callback, void *user_data);
 
 /*******************************************************************************
  *

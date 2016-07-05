@@ -629,7 +629,7 @@ static int handle_packet_send(Tox *tox, uint32_t dev_num, uint8_t *pkt, uint16_t
     MDevice *mdev = tox->mdev;
 
     switch (pkt[0]) {
-        case MDEV_SEND_NAME: {
+        case MDEV_SEND_SELF_NAME: {
             uint8_t *name        = pkt + 1;
             size_t   name_length = length - 1;
 
@@ -658,7 +658,7 @@ static int handle_packet_send(Tox *tox, uint32_t dev_num, uint8_t *pkt, uint16_t
             break;
         }
 
-        case MDEV_SEND_STATUS: {
+        case MDEV_SEND_SELF_STATUS_MSG: {
             uint8_t *status        = pkt + 1;
             size_t   status_length = length - 1;
 
@@ -684,9 +684,27 @@ static int handle_packet_send(Tox *tox, uint32_t dev_num, uint8_t *pkt, uint16_t
             break;
         }
 
+        case MDEV_SEND_SELF_STATE: {
+            if (length != 2) {
+                return -1;
+            }
+
+            if (pkt[1] >= USERSTATUS_INVALID) {
+                return -1;
+            }
+
+            if (mdev->self_user_state_change) {
+                mdev->self_user_state_change(tox, dev_num, pkt[1], mdev->self_user_state_change_userdata);
+            } else {
+                return -1;
+            }
+
+            break;
+        }
+
         case MDEV_SEND_MESSAGE:
         case MDEV_SEND_MESSAGE_ACTION: {
-            if (mdev->device_sent_message) {
+            if (mdev->mdev_sent_message) {
 
                 if (length <= sizeof(uint32_t) + 1) {
                     return -1;
@@ -704,7 +722,7 @@ static int handle_packet_send(Tox *tox, uint32_t dev_num, uint8_t *pkt, uint16_t
 
                 size_t message_length = length - sizeof(uint32_t) - 1;
 
-                mdev->device_sent_message(tox, dev_num, target, type, message, message_length);
+                mdev->mdev_sent_message(tox, dev_num, target, type, message, message_length);
             }
 
             break;
@@ -756,6 +774,26 @@ static int handle_packet_sync(Tox *tox, uint32_t dev_num, uint8_t *pkt, uint16_t
                 init_sync_friends(tox, dev_num);
             }
 
+            break;
+        }
+
+        case MDEV_SYNC_SELF_NAME: {
+            printf("recv: %u\n", pkt[1]);
+            break;
+        }
+
+        case MDEV_SYNC_SELF_STATUS_MSG: {
+            printf("recv: %u\n", pkt[1]);
+            break;
+        }
+
+        case MDEV_SYNC_SELF_STATE: {
+            printf("recv: %u\n", pkt[1]);
+            break;
+        }
+
+        case MDEV_SYNC_SELF_DONE: {
+            printf("recv: %u\n", pkt[1]);
             break;
         }
 
@@ -857,7 +895,6 @@ static int handle_packet_sync(Tox *tox, uint32_t dev_num, uint8_t *pkt, uint16_t
             printf("%d", pkt[1]);
             break;
         }
-
     }
 
     return 0;
@@ -925,7 +962,7 @@ bool mdev_send_name_change(Tox *tox, const uint8_t *name, size_t length)
     uint8_t packet[length + 2];
 
     packet[0] = PACKET_ID_MDEV_SEND;
-    packet[1] = MDEV_SEND_NAME;
+    packet[1] = MDEV_SEND_SELF_NAME;
     memcpy(&packet[2], name, length);
 
     if (tox->mdev->devices_count == 0) {
@@ -945,7 +982,7 @@ bool mdev_send_status_message_change(Tox *tox, const uint8_t *status, size_t len
     uint8_t packet[length + 2];
 
     packet[0] = PACKET_ID_MDEV_SEND;
-    packet[1] = MDEV_SEND_STATUS;
+    packet[1] = MDEV_SEND_SELF_STATUS_MSG;
     memcpy(&packet[2], status, length);
 
     if (tox->mdev->devices_count == 0) {
@@ -955,6 +992,26 @@ bool mdev_send_status_message_change(Tox *tox, const uint8_t *status, size_t len
     uint32_t dev = UINT32_MAX;
     while (get_next_device_online(tox->mdev, &dev)) {
         send_mdev_packet(tox, dev, packet, length + 2);
+    }
+
+    return 1;
+}
+
+bool mdev_send_state_change(Tox *tox, const TOX_USER_STATUS state)
+{
+    if (tox->mdev->devices_count == 0) {
+        return 0;
+    }
+
+    uint8_t packet[3];
+
+    packet[0] = PACKET_ID_MDEV_SEND;
+    packet[1] = MDEV_SEND_SELF_STATE;
+    packet[2] = state;
+
+    uint32_t dev = UINT32_MAX;
+    while (get_next_device_online(tox->mdev, &dev)) {
+        send_mdev_packet(tox, dev, packet, 3);
     }
 
     return 1;
@@ -991,8 +1048,9 @@ int mdev_send_message_generic(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE
 }
 
 
+
 /******************************************************************************
- ******** Multi-device Public API functions                            ********
+ ******** Multi-device Exposed API functions                           ********
  ******************************************************************************/
 int32_t mdev_get_dev_count(Tox *tox)
 {
@@ -1030,26 +1088,28 @@ bool mdev_get_dev_pubkey(Tox *tox, uint32_t number, uint8_t pk[crypto_box_PUBLIC
 /******************************************************************************
  ******** Multi-device set callbacks                                   ********
  ******************************************************************************/
-void mdev_callback_self_name_change(Tox *tox,
-                                   void (*function)(Tox *tox, uint32_t, const uint8_t *, size_t, void *),
-                                   void *userdata)
+void mdev_callback_self_name(Tox *tox, tox_mdev_self_name_cb *fxn, void *userdata)
 {
-    tox->mdev->self_name_change = function;
+    tox->mdev->self_name_change = fxn;
     tox->mdev->self_name_change_userdata = userdata;
 }
 
-void mdev_callback_self_status_message_change(Tox *tox,
-                                   void (*function)(Tox *tox, uint32_t, const uint8_t *, size_t, void *),
-                                   void *userdata)
+void mdev_callback_self_status_message(Tox *tox, tox_mdev_self_status_message_cb *fxn, void *userdata)
 {
-    tox->mdev->self_status_message_change = function;
+    tox->mdev->self_status_message_change = fxn;
     tox->mdev->self_status_message_change_userdata = userdata;
 }
 
-void mdev_callback_device_sent_message(Tox *tox, tox_device_sent_message_cb *callback, void *userdata)
+void mdev_callback_self_state(Tox *tox, tox_mdev_self_state_cb *fxn, void *userdata)
 {
-    tox->mdev->device_sent_message = callback;
-    tox->mdev->device_sent_message_userdata = userdata;
+    tox->mdev->self_user_state_change = fxn;
+    tox->mdev->self_user_state_change_userdata = userdata;
+}
+
+void mdev_callback_mdev_sent_message(Tox *tox, tox_mdev_sent_message_cb *fxn, void *userdata)
+{
+    tox->mdev->mdev_sent_message = fxn;
+    tox->mdev->mdev_sent_message_userdata = userdata;
 }
 
 /******************************************************************************

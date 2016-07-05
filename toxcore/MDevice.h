@@ -92,8 +92,8 @@ typedef enum {
 
     MDEV_SYNC_SELF,
     MDEV_SYNC_SELF_NAME,
-    MDEV_SYNC_SELF_MSG,
-    MDEV_SYNC_SELF_STATUS,
+    MDEV_SYNC_SELF_STATUS_MSG,
+    MDEV_SYNC_SELF_STATE,
     MDEV_SYNC_SELF_DONE,
 
     MDEV_SYNC_CONTACT_START,
@@ -119,9 +119,10 @@ typedef enum {
     MDEV_SYNC_NOTHING,
 
     /* Send type packets are for active changes */
-    MDEV_SEND_NAME,
-    MDEV_SEND_MSG,
-    MDEV_SEND_STATUS,
+    MDEV_SEND_SELF_NAME,
+    MDEV_SEND_SELF_STATUS_MSG, /* User flavor text */
+    MDEV_SEND_SELF_STATE,      /* User state (e.g. Available, Away, DND */
+
     MDEV_SEND_MESSAGE,
     MDEV_SEND_MESSAGE_ACTION,
 
@@ -243,13 +244,17 @@ struct MDevice {
 
 
     /* Callbacks */
-    void (*self_name_change)(Tox *tox, uint32_t, const uint8_t *, size_t, void *);
+    tox_mdev_self_name_cb (*self_name_change);
     void *self_name_change_userdata;
-    void (*self_status_message_change)(Tox *tox, uint32_t, const uint8_t *, size_t, void *);
+
+    tox_mdev_self_status_message_cb (*self_status_message_change);
     void *self_status_message_change_userdata;
 
-    tox_device_sent_message_cb (*device_sent_message);
-    void *device_sent_message_userdata;
+    tox_mdev_self_state_cb (*self_user_state_change);
+    void *self_user_state_change_userdata;
+
+    tox_mdev_sent_message_cb (*mdev_sent_message);
+    void *mdev_sent_message_userdata;
 
     MDevice_Options options;
 };
@@ -275,12 +280,9 @@ int32_t mdev_get_dev_count(Tox *tox);
 bool mdev_get_dev_pubkey(Tox *tox, uint32_t number, uint8_t pk[crypto_box_PUBLICKEYBYTES]);
 
 /* Multi-device set callbacks */
-void mdev_callback_self_name_change(Tox *tox,
-                                   void (*function)(Tox *tox, uint32_t, const uint8_t *, size_t, void *),
-                                   void *userdata);
-void mdev_callback_self_status_message_change(Tox *tox,
-                                   void (*function)(Tox *tox, uint32_t, const uint8_t *, size_t, void *),
-                                   void *userdata);
+void mdev_callback_self_name(Tox *tox, tox_mdev_self_name_cb *function, void *userdata);
+void mdev_callback_self_status_message(Tox *tox, tox_mdev_self_status_message_cb *function, void *userdata);
+void mdev_callback_self_state(Tox *tox, tox_mdev_self_state_cb *function, void *userdata);
 
 /**
  * Set the callback to recieve messages sent by other devices
@@ -289,7 +291,7 @@ void mdev_callback_self_status_message_change(Tox *tox,
  * @param callback [description]
  * @param userdata [description]
  */
-void mdev_callback_device_sent_message(Tox *tox, tox_device_sent_message_cb *callback, void *userdata);
+void mdev_callback_device_sent_message(Tox *tox, tox_mdev_sent_message_cb *callback, void *userdata);
 
 /* Multi-device send data fxns */
 bool mdev_send_name_change(Tox *tox, const uint8_t *name, size_t length);

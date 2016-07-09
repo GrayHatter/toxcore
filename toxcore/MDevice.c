@@ -503,6 +503,12 @@ static int sync_friend_recived(Tox *tox, uint32_t dev_num, uint8_t *real_pk, boo
             if (device) {
                 /* error here, can't add a device_pk when we already know this friend */
                     /* corner case, handling pre-existing friends that need to be grouped together */
+                if (mdev > mdev->devices_count) {
+                    if (!send_mdev_sync_packet(tox, dev_num, MDEV_SYNC_CONTACT_ERROR)) {
+                        decon_sync(mdev, dev_num);
+                    }
+                    return -1;
+                }
                 break;
             }
 
@@ -524,6 +530,12 @@ static int sync_friend_recived(Tox *tox, uint32_t dev_num, uint8_t *real_pk, boo
             if (!device) {
                 /* A friend already controls this device, but our peer says this is only a friend */
                     /* corner case, handling pre-existing friends that need to be grouped together */
+                if (dev_num <= mdev->devices_count) {
+                    if (!send_mdev_sync_packet(tox, dev_num, MDEV_SYNC_CONTACT_ERROR)) {
+                        decon_sync(mdev, dev_num);
+                    }
+                    return -1;
+                }
                 break;
             }
             dev_position = getfriend_devid(m, real_pk);

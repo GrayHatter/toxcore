@@ -272,12 +272,14 @@ typedef struct Tox Tox;
 
 /**
  * Does house keeping for multidevice
+ *
  * @param tox the current tox instance
  */
 void do_multidevice(Tox *tox);
 
 /**
  * Creates a new MDevice instance
+ * Should only be called by tox_new()
  * @param  tox the current tox instance
  * @param  options the options that should be set
  * @param  error   buffer used for setting the error
@@ -288,11 +290,12 @@ MDevice *new_mdevice(Tox* tox, MDevice_Options *options, unsigned int *error);
 
 /**
  * Adds a new device to the device list
+ *
  * @param  tox     The current tox instance
  * @param  name    The devices name
  * @param  length  Length of the devices name
  * @param  real_pk The devices public key
- * @return         device count on success
+ * @return         number of devices added on success
  * @return         -2 if real_pk is invalid
  * @return         -3 if real_pk equals
  * @return         -4 if the device id is blacklisted
@@ -303,15 +306,17 @@ int mdev_add_new_device_self(Tox *tox, const uint8_t* name, size_t length, const
 
 /**
  * Removes a device and adds it to the removed_devices blacklist
+ *
  * @param  tox     The current tox instance
  * @param  address The device's public key
  * @return         0 on success
- * @return         -1 if the device doesn't exist
+ * @return         -1 if the device id could not be found
  */
 int mdev_remove_device(Tox* tox, const uint8_t *address);
 
 /**
  * Returns the number of devices in your device list
+ *
  * @param  tox The current tox instance
  * @return     Returns the number of devices in the device list.
  */
@@ -319,16 +324,19 @@ int32_t mdev_get_dev_count(Tox *tox);
 
 /**
  * If devices exists, pk is set the the real_pk at that device index
+ *
  * @param  tox    The current tox instance
  * @param  number The device number
- * @param  pk     The devices public key
+ * @param  pk     The devices public key must be at least crypto_box_PUBLICKEYBYTES
  * @return        1 on success, 0 on failure
  */
 bool mdev_get_dev_pubkey(Tox *tox, uint32_t number, uint8_t pk[crypto_box_PUBLICKEYBYTES]);
 
 /* Multi-device set callbacks */
+
 /**
- * Sets the callback for name changes
+ * Sets the callback for receiving name changes from remote devices. Pass NULL for function to unset.
+ *
  * @param tox      The current tox instance
  * @param function The function that will be called
  * @param userdata The data that will be passed to the function
@@ -336,7 +344,8 @@ bool mdev_get_dev_pubkey(Tox *tox, uint32_t number, uint8_t pk[crypto_box_PUBLIC
 void mdev_callback_self_name(Tox *tox, tox_mdev_self_name_cb *function, void *userdata);
 
 /**
- * Sets the callback for status changes
+ * Sets the callback for receiving status changes from remote devices. Pass NULL for furnciton to unset.
+ *
  * @param tox      The current tox instance
  * @param function The function that will be called
  * @param userdata The data that will be passed to the function
@@ -344,21 +353,13 @@ void mdev_callback_self_name(Tox *tox, tox_mdev_self_name_cb *function, void *us
 void mdev_callback_self_status_message(Tox *tox, tox_mdev_self_status_message_cb *function, void *userdata);
 
 /**
- * Sets the callback for state changes
+ * Sets the callback for receiving state changes from remote devices. Pass NULL for function to unset.
+ *
  * @param tox      The current tox instance
  * @param function The function that will be called
  * @param userdata The data that will be passed to the function
  */
 void mdev_callback_self_state(Tox *tox, tox_mdev_self_state_cb *function, void *userdata);
-
-/**
- * Set the callback to recieve messages sent by other devices
- *
- * @param tox      The current tox instance
- * @param callback The function that will be called
- * @param userdata The data that will be passed to the function
- */
-void mdev_callback_device_sent_message(Tox *tox, tox_mdev_sent_message_cb *callback, void *userdata);
 
 /**
  * Sets the callback for sent messages
@@ -374,6 +375,7 @@ void mdev_callback_mdev_sent_message(Tox *tox, tox_mdev_sent_message_cb *fxn, vo
 
 /**
  * Sends name changes to your other devices
+ * called by tox_self_set_name()
  * @param tox    The current tox instance
  * @param name   The users new name
  * @param length Length of name
@@ -383,6 +385,7 @@ bool mdev_send_name_change(Tox *tox, const uint8_t *name, size_t length);
 
 /**
  * Sends status changes to your other devices
+ * Called by tox_self_set_status_message()
  * @param  tox    The current tox instance
  * @param  status The users new status
  * @param  length Length of status
@@ -392,15 +395,16 @@ bool mdev_send_status_message_change(Tox *tox, const uint8_t *status, size_t len
 
 /**
  * Sends state changes to your other devices
+ *
  * @param  tox   The current tox instance
  * @param  state The state the user should be in
  * @return       1 on success, 0 on failure
  */
 bool mdev_send_state_change(Tox *tox, const TOX_USER_STATUS state);
 
-
 /**
  * Sends a message to the specified friend
+ *
  * @param  tox           The current tox instance
  * @param  friend_number The friend you want to send the message to
  * @param  type          The type of message that is being sent
@@ -414,6 +418,7 @@ int  mdev_send_message_generic(Tox* tox, uint32_t friend_number, TOX_MESSAGE_TYP
 
 /**
  * Calculates the size of the MDevice structure
+ * Designed to be used by the save function
  * @param  tox The current tox instance
  * @return     Size of the MDevice struct
  */
@@ -421,6 +426,7 @@ size_t mdev_size(const Tox *tox);
 
 /**
  * Generates the MDevice data that should be saved
+ *
  * @param  tox  The current tox instance
  * @param  data The buffer the save data is written to
  * @return      data
@@ -429,6 +435,7 @@ uint8_t *mdev_save(const Tox *tox, uint8_t *data);
 
 /**
  * Loads the MDevice data from the sections of the saved state
+ *
  * @param  tox    The current tox instance
  * @param  data   The data that is going to be loaded
  * @param  length Length of data

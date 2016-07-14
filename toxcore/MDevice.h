@@ -295,7 +295,7 @@ MDevice *new_mdevice(Tox* tox, MDevice_Options *options, unsigned int *error);
  * @param  name    The devices name
  * @param  length  Length of the devices name
  * @param  real_pk The devices public key
- * @return         number of devices added on success
+ * @return         number of added devices on success
  * @return         -2 if real_pk is invalid
  * @return         -3 if real_pk equals
  * @return         -4 if the device id is blacklisted

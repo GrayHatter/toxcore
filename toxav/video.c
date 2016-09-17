@@ -56,49 +56,49 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         goto BASE_CLEANUP;
     }
 
-    int rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE, NULL, 0);
+    int rc = aom_codec_dec_init(vc->decoder, aom_codec_av1_dx, NULL, 0);
 
-    if (rc != VPX_CODEC_OK) {
-        LOGGER_ERROR(log, "Init video_decoder failed: %s", vpx_codec_err_to_string(rc));
+    if (rc != AOM_CODEC_OK) {
+        LOGGER_ERROR(log, "Init video_decoder failed: %s", aom_codec_err_to_string(rc));
         goto BASE_CLEANUP;
     }
 
     /* Set encoder to some initial values
      */
-    vpx_codec_enc_cfg_t  cfg;
-    rc = vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE, &cfg, 0);
+    aom_codec_enc_cfg_t  cfg;
+    rc = aom_codec_enc_config_default(aom_codec_av1_cx, &cfg, 0);
 
-    if (rc != VPX_CODEC_OK) {
-        LOGGER_ERROR(log, "Failed to get config: %s", vpx_codec_err_to_string(rc));
+    if (rc != AOM_CODEC_OK) {
+        LOGGER_ERROR(log, "Failed to get config: %s", aom_codec_err_to_string(rc));
         goto BASE_CLEANUP_1;
     }
 
     cfg.rc_target_bitrate = 500000;
     cfg.g_w = 800;
     cfg.g_h = 600;
-    cfg.g_pass = VPX_RC_ONE_PASS;
+    cfg.g_pass = AOM_RC_ONE_PASS;
     /* TODO(mannol): If we set error resilience the app will crash due to bug in vp8.
        Perhaps vp9 has solved it?*/
 #if 0
-    cfg.g_error_resilient = VPX_ERROR_RESILIENT_DEFAULT | VPX_ERROR_RESILIENT_PARTITIONS;
+    cfg.g_error_resilient = AOM_ERROR_RESILIENT_DEFAULT | AOM_ERROR_RESILIENT_PARTITIONS;
 #endif
     cfg.g_lag_in_frames = 0;
     cfg.kf_min_dist = 0;
     cfg.kf_max_dist = 48;
-    cfg.kf_mode = VPX_KF_AUTO;
+    cfg.kf_mode = AOM_KF_AUTO;
 
-    rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE, &cfg, 0);
+    rc = aom_codec_enc_config_default(vc->encoder[0].iface, &cfg, 0);
 
-    if (rc != VPX_CODEC_OK) {
-        LOGGER_ERROR(log, "Failed to initialize encoder: %s", vpx_codec_err_to_string(rc));
+    if (rc != AOM_CODEC_OK) {
+        LOGGER_ERROR(log, "Failed to initialize encoder: %s", aom_codec_err_to_string(rc));
         goto BASE_CLEANUP_1;
     }
 
-    rc = vpx_codec_control(vc->encoder, VP8E_SET_CPUUSED, 8);
+    rc = aom_codec_control(vc->encoder, AOME_SET_CPUUSED, 8);
 
-    if (rc != VPX_CODEC_OK) {
-        LOGGER_ERROR(log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
-        vpx_codec_destroy(vc->encoder);
+    if (rc != AOM_CODEC_OK) {
+        LOGGER_ERROR(log, "Failed to set encoder control setting: %s", aom_codec_err_to_string(rc));
+        aom_codec_destroy(vc->encoder);
         goto BASE_CLEANUP_1;
     }
 
@@ -112,7 +112,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     return vc;
 
 BASE_CLEANUP_1:
-    vpx_codec_destroy(vc->decoder);
+    aom_codec_destroy(vc->decoder);
 BASE_CLEANUP:
     pthread_mutex_destroy(vc->queue_mutex);
     rb_kill(vc->vbuf_raw);
@@ -125,8 +125,8 @@ void vc_kill(VCSession *vc)
         return;
     }
 
-    vpx_codec_destroy(vc->encoder);
-    vpx_codec_destroy(vc->decoder);
+    aom_codec_destroy(vc->encoder);
+    aom_codec_destroy(vc->decoder);
 
     void *p;
 
@@ -156,24 +156,24 @@ void vc_iterate(VCSession *vc, void *userdata)
     if (rb_read(vc->vbuf_raw, (void **)&p)) {
         pthread_mutex_unlock(vc->queue_mutex);
 
-        rc = vpx_codec_decode(vc->decoder, p->data, p->len, NULL, MAX_DECODE_TIME_US);
+        rc = aom_codec_decode(vc->decoder, p->data, p->len, NULL, MAX_DECODE_TIME_US);
         free(p);
 
-        if (rc != VPX_CODEC_OK) {
-            LOGGER_ERROR(vc->log, "Error decoding video: %s", vpx_codec_err_to_string(rc));
+        if (rc != AOM_CODEC_OK) {
+            LOGGER_ERROR(vc->log, "Error decoding video: %s", aom_codec_err_to_string(rc));
         } else {
-            vpx_codec_iter_t iter = NULL;
-            vpx_image_t *dest = vpx_codec_get_frame(vc->decoder, &iter);
+            aom_codec_iter_t iter = NULL;
+            aom_image_t *dest = aom_codec_get_frame(vc->decoder, &iter);
 
             /* Play decoded images */
-            for (; dest; dest = vpx_codec_get_frame(vc->decoder, &iter)) {
+            for (; dest; dest = aom_codec_get_frame(vc->decoder, &iter)) {
                 if (vc->on_video_frame) {
                     vc->on_video_frame(vc->av, vc->friend_number, dest->d_w, dest->d_h,
                                        (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
                                        dest->stride[0], dest->stride[1], dest->stride[2], userdata);
                 }
 
-                vpx_img_free(dest);
+                aom_img_free(dest);
             }
         }
 
@@ -223,7 +223,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         return -1;
     }
 
-    vpx_codec_enc_cfg_t cfg = *vc->encoder->config.enc;
+    aom_codec_enc_cfg_t cfg = *vc->encoder->config.enc;
     int rc;
 
     if (cfg.rc_target_bitrate == bit_rate && cfg.g_w == width && cfg.g_h == height) {
@@ -234,10 +234,10 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         /* Only bit rate changed */
         cfg.rc_target_bitrate = bit_rate;
 
-        rc = vpx_codec_enc_config_set(vc->encoder, &cfg);
+        rc = aom_codec_enc_config_set(vc->encoder, &cfg);
 
-        if (rc != VPX_CODEC_OK) {
-            LOGGER_ERROR(vc->log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
+        if (rc != AOM_CODEC_OK) {
+            LOGGER_ERROR(vc->log, "Failed to set encoder control setting: %s", aom_codec_err_to_string(rc));
             return -1;
         }
     } else {
@@ -251,24 +251,24 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         cfg.g_w = width;
         cfg.g_h = height;
 
-        vpx_codec_ctx_t new_c;
+        aom_codec_ctx_t new_c;
 
-        rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE, &cfg, 0);
+        rc = aom_codec_enc_config_default(aom_codec_av1_cx, &cfg, 0);
 
-        if (rc != VPX_CODEC_OK) {
-            LOGGER_ERROR(vc->log, "Failed to initialize encoder: %s", vpx_codec_err_to_string(rc));
+        if (rc != AOM_CODEC_OK) {
+            LOGGER_ERROR(vc->log, "Failed to initialize encoder: %s", aom_codec_err_to_string(rc));
             return -1;
         }
 
-        rc = vpx_codec_control(&new_c, VP8E_SET_CPUUSED, 8);
+        rc = aom_codec_control(&new_c, AOME_SET_CPUUSED, 8);
 
-        if (rc != VPX_CODEC_OK) {
-            LOGGER_ERROR(vc->log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
-            vpx_codec_destroy(&new_c);
+        if (rc != AOM_CODEC_OK) {
+            LOGGER_ERROR(vc->log, "Failed to set encoder control setting: %s", aom_codec_err_to_string(rc));
+            aom_codec_destroy(&new_c);
             return -1;
         }
 
-        vpx_codec_destroy(vc->encoder);
+        aom_codec_destroy(vc->encoder);
         memcpy(vc->encoder, &new_c, sizeof(new_c));
     }
 

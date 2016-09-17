@@ -807,26 +807,27 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         goto END;
     }
 
-    { /* Encode */
-        vpx_image_t img;
+    {   /* Encode */
+        /* TODO(grayhatter) move all aom_* functions into wrappers for ease of switching for v0.0.0 compat. */
+        aom_image_t img;
         img.w = img.h = img.d_w = img.d_h = 0;
-        vpx_img_alloc(&img, VPX_IMG_FMT_I420, width, height, 0);
+        aom_img_alloc(&img, AOM_IMG_FMT_I420, width, height, 0);
 
         /* I420 "It comprises an NxM Y plane followed by (N/2)x(M/2) V and U planes."
          * http://fourcc.org/yuv.php#IYUV
          */
-        memcpy(img.planes[VPX_PLANE_Y], y, width * height);
-        memcpy(img.planes[VPX_PLANE_U], u, (width / 2) * (height / 2));
-        memcpy(img.planes[VPX_PLANE_V], v, (width / 2) * (height / 2));
+        memcpy(img.planes[AOM_PLANE_Y], y, width * height);
+        memcpy(img.planes[AOM_PLANE_U], u, (width / 2) * (height / 2));
+        memcpy(img.planes[AOM_PLANE_V], v, (width / 2) * (height / 2));
 
-        int vrc = vpx_codec_encode(call->video.second->encoder, &img,
+        int vrc = aom_codec_encode(call->video.second->encoder, &img,
                                    call->video.second->frame_counter, 1, 0, MAX_ENCODE_TIME_US);
 
-        vpx_img_free(&img);
+        aom_img_free(&img);
 
-        if (vrc != VPX_CODEC_OK) {
+        if (vrc != AOM_CODEC_OK) {
             pthread_mutex_unlock(call->mutex_video);
-            LOGGER_ERROR(av->m->log, "Could not encode video frame: %s\n", vpx_codec_err_to_string(vrc));
+            LOGGER_ERROR(av->m->log, "Could not encode video frame: %s\n", aom_codec_err_to_string(vrc));
             rc = TOXAV_ERR_SEND_FRAME_INVALID;
             goto END;
         }
@@ -835,11 +836,11 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     ++call->video.second->frame_counter;
 
     { /* Send frames */
-        vpx_codec_iter_t iter = NULL;
-        const vpx_codec_cx_pkt_t *pkt;
+        aom_codec_iter_t iter = NULL;
+        const aom_codec_cx_pkt_t *pkt;
 
-        while ((pkt = vpx_codec_get_cx_data(call->video.second->encoder, &iter))) {
-            if (pkt->kind == VPX_CODEC_CX_FRAME_PKT &&
+        while ((pkt = aom_codec_get_cx_data(call->video.second->encoder, &iter))) {
+            if (pkt->kind == AOM_CODEC_CX_FRAME_PKT &&
                     rtp_send_data(call->video.first, pkt->data.frame.buf, pkt->data.frame.sz) < 0) {
 
                 pthread_mutex_unlock(call->mutex_video);

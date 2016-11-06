@@ -37,8 +37,8 @@ extern "C" {
 
 /*****************************************************************************
  * `tox.h` SHOULD *NOT* BE EDITED MANUALLY – any changes should be made to   *
- * `tox.in.h`, located in `other/apidsl/`. For instructions on how to        *
- * generate `tox.h` from `tox.in.h` please refer to `other/apidsl/README.md` *
+ * `tox.api.h`, located in `toxcore/`. For instructions on how to            *
+ * generate `tox.h` from `tox.api.h` please refer to `docs/apidsl.md`        *
  *****************************************************************************/
 
 
@@ -179,7 +179,7 @@ const VERSION_MINOR                = 0;
  * The patch or revision number. Incremented when bugfixes are applied without
  * changing any functionality or API or ABI.
  */
-const VERSION_PATCH                = 1;
+const VERSION_PATCH                = 2;
 
 /**
  * A macro to check at preprocessing time whether the client code is compatible
@@ -683,8 +683,8 @@ uint8_t[size] savedata {
   /**
    * Store all information associated with the tox instance to a byte array.
    *
-   * @param data A memory region large enough to store the tox instance data.
-   *   Call $size to find the number of bytes required. If this parameter
+   * @param savedata A memory region large enough to store the tox instance
+   *   data. Call $size to find the number of bytes required. If this parameter
    *   is NULL, this function has no effect.
    */
   get();
@@ -965,8 +965,8 @@ inline namespace self {
      * Call $size to find out how much memory to allocate for
      * the result.
      *
-     * @param status A valid memory location large enough to hold the status message.
-     *   If this parameter is NULL, the function has no effect.
+     * @param status_message A valid memory location large enough to hold the
+     *   status message. If this parameter is NULL, the function has no effect.
      */
     get();
   }
@@ -976,7 +976,7 @@ inline namespace self {
     /**
      * Set the client's user status.
      *
-     * @param user_status One of the user statuses listed in the enumeration above.
+     * @param status One of the user statuses listed in the enumeration above.
      */
     set();
 
@@ -1151,8 +1151,8 @@ inline namespace self {
      *
      * Call $size to determine the number of elements to allocate.
      *
-     * @param list A memory region with enough space to hold the friend list. If
-     *   this parameter is NULL, this function has no effect.
+     * @param friend_list A memory region with enough space to hold the friend
+     *   list. If this parameter is NULL, this function has no effect.
      */
     get();
   }
@@ -1524,17 +1524,11 @@ namespace friend {
   event request const {
     /**
      * @param public_key The Public Key of the user who sent the friend request.
-     * @param time_delta A delta in seconds between when the message was composed
-     *   and when it is being transmitted. For messages that are sent immediately,
-     *   it will be 0. If a message was written and couldn't be sent immediately
-     *   (due to a connection failure, for example), the time_delta is an
-     *   approximation of when it was composed.
      * @param message The message they sent along with the request.
      * @param length The size of the message byte array.
      */
-    typedef void(const uint8_t[PUBLIC_KEY_SIZE] public_key
-                 //, uint32_t time_delta
-                 , const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
+    typedef void(const uint8_t[PUBLIC_KEY_SIZE] public_key,
+                 const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
   }
 
 
@@ -1544,15 +1538,10 @@ namespace friend {
   event message const {
     /**
      * @param friend_number The friend number of the friend who sent the message.
-     * @param time_delta Time between composition and sending.
      * @param message The message data they sent.
      * @param length The size of the message byte array.
-     *
-     * @see ${event request} for more information on time_delta.
      */
-    typedef void(uint32_t friend_number
-                 //, uint32_t time_delta
-                 , MESSAGE_TYPE type,
+    typedef void(uint32_t friend_number, MESSAGE_TYPE type,
                  const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
   }
 
@@ -1752,18 +1741,18 @@ namespace file {
     NOT_FOUND,
   }
 
-  /**
-   * Copy the file id associated to the file transfer to a byte array.
-   *
-   * @param friend_number The friend number of the friend the file is being
-   *   transferred to or received from.
-   * @param file_number The friend-specific identifier for the file transfer.
-   * @param file_id A memory region of at least $FILE_ID_LENGTH bytes. If
-   *   this parameter is NULL, this function has no effect.
-   *
-   * @return true on success.
-   */
   uint8_t[FILE_ID_LENGTH] file_id {
+    /**
+     * Copy the file id associated to the file transfer to a byte array.
+     *
+     * @param friend_number The friend number of the friend the file is being
+     *   transferred to or received from.
+     * @param file_number The friend-specific identifier for the file transfer.
+     * @param file_id A memory region of at least $FILE_ID_LENGTH bytes. If
+     *   this parameter is NULL, this function has no effect.
+     *
+     * @return true on success.
+     */
     get(uint32_t friend_number, uint32_t file_number)
         with error for get;
   }
@@ -2371,8 +2360,6 @@ namespace conference {
     /**
      * Copy a list of valid conference IDs into the array chatlist. Determine how much space
      * to allocate for the array with the `$size` function.
-     *
-     * @return The number of elements copied to the array, or 0 if chatlist is set to NULL.
      */
     get();
   }

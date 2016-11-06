@@ -60,7 +60,7 @@ On Fedora:
 dnf groupinstall "Development Tools"
 dnf install libtool autoconf automake check check-devel
 ```
-Using ``dnf install @"Development Tools"`` is also valid and slightly shorter / cleaner way. ``@"Rpm Development Tools"``  would carry the remaining dependencies listed here.
+Using ``dnf install @"Development Tools"`` is also valid and slightly shorter / cleaner way. ``dnf install @"Rpm Development Tools"``  would carry the remaining dependencies listed here.
 
 On SunOS:
 
@@ -80,7 +80,7 @@ You should get and install [libsodium](https://github.com/jedisct1/libsodium). I
 ```bash
 git clone https://github.com/jedisct1/libsodium.git
 cd libsodium
-git checkout tags/1.0.3
+git checkout tags/1.0.11
 ./autogen.sh
 ./configure && make check
 sudo checkinstall --install --pkgname libsodium --pkgversion 1.0.0 --nodoc
@@ -95,7 +95,7 @@ this will install the libs to /usr/local/lib and the headers to /usr/local/inclu
 ```bash
 git clone https://github.com/jedisct1/libsodium.git
 cd libsodium
-git checkout tags/1.0.3
+git checkout tags/1.0.11
 ./autogen.sh
 ./configure
 make check
@@ -119,12 +119,11 @@ sudo ldconfig
 
 ##### Compile toxcore
 
-Then clone this repo, generate makefile, and install `toxcore` system-wide:
+Then clone this repo, run `cmake`, and install `toxcore` system-wide:
 ```bash
-git clone https://github.com/irungentoo/toxcore.git
-cd toxcore
-autoreconf -i
-./configure
+git clone https://github.com/TokTok/c-toxcore.git c-toxcore
+cd c-toxcore
+cmake .
 make
 sudo make install
 ```
@@ -153,8 +152,8 @@ brew install libtool automake autoconf libsodium check
 ```
 Then clone this repo and generate makefile:
 ```bash
-git clone https://github.com/irungentoo/toxcore.git
-cd toxcore
+git clone https://github.com/TokTok/c-toxcore.git c-toxcore
+cd c-toxcore
 autoreconf -i
 ./configure
 make
@@ -233,7 +232,7 @@ sudo make install
 Compiling and installing Tox Core
 
 ```bash
-cd toxcore
+cd c-toxcore
 autoreconf -i
 ./configure (OS X 10.5 specific)
 ./configure CC="gcc -arch ppc -arch i386" CXX="g++ -arch ppc -arch i386" CPP="gcc -E" CXXCPP="g++ -E"
@@ -405,8 +404,8 @@ cd ..
 
 And finally we will build Tox:
 ```bash
-git clone https://github.com/irungentoo/toxcore
-cd toxcore
+git clone https://github.com/TokTok/c-toxcore.git c-toxcore
+cd c-toxcore
 ./autogen.sh
 ./configure --host="$WINDOWS_TOOLCHAIN" --prefix="$PREFIX_DIR" --disable-ntox --disable-tests --disable-testing --with-dependency-search="$PREFIX_DIR" --disable-shared --enable-static
 make
@@ -462,12 +461,12 @@ cd ..
 
 You can also use a precompiled win32 binary of libsodium, however you will have to place the files in places where they can be found, i.e., dll's go to /bin headers to /include and libraries to /lib directories in your MinGW shell.
 
-Next, install toxcore library, should either clone this repo by using git, or just download a [zip of current Master branch](https://github.com/irungentoo/toxcore/archive/master.zip) and extract it somewhere.
+Next, install toxcore library, should either clone this repo by using git, or just download a [zip of current Master branch](https://github.com/TokTok/toxcore/archive/master.zip) and extract it somewhere.
 
 Assuming that you now have the sources in the toxcore directory:
 
 ```cmd
-cd toxcore
+cd c-toxcore
 autoreconf -i
 ./configure
 make
